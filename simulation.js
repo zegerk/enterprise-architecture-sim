@@ -1,30 +1,53 @@
+/**
+ * Simulation timer in ticks
+ */
+let simTime = 0;
+
+/**
+ * Enum for token types
+ */
 const tokenTypes = {
     TOKEN_TYPE_IN: 'in',
     TOKEN_TYPE_OUT: 'out'
 }
 
+/**
+ * Token factory
+ */
 const getToken = () => {
     return {
-        count: 0
+        created: simTime
     };
 }
 
+/**
+ * Tokens factory for the nodes
+ */
 const getTokens = () => {
     return {
-        [tokenTypes.TOKEN_TYPE_IN]: getToken(),
-        [tokenTypes.TOKEN_TYPE_OUT]: getToken(),
+        [tokenTypes.TOKEN_TYPE_IN]: [],
+        [tokenTypes.TOKEN_TYPE_OUT]: [],
     };
 }
 
+/**
+ * @todo a bit crude.
+ * 
+ * @param {*} node 
+ * @returns 
+ */
 const getNodeLabel = (node) => {
-    return 'In : ' + node.tokens[tokenTypes.TOKEN_TYPE_IN].count + "\n" +
-           'Out : ' + node.tokens[tokenTypes.TOKEN_TYPE_OUT].count + "\n" + 
+    return 'In : ' + node.tokens[tokenTypes.TOKEN_TYPE_IN].length + "\n" +
+           'Out : ' + node.tokens[tokenTypes.TOKEN_TYPE_OUT].length + "\n" + 
            node.name;
 }
 
+/**
+ * Process the tokens my converting in tokens to out tokens
+ */
 const processDb = () => (node) => {
-    node.tokens[tokenTypes.TOKEN_TYPE_OUT].count = node.tokens[tokenTypes.TOKEN_TYPE_IN].count;
-    node.tokens[tokenTypes.TOKEN_TYPE_IN].count = 0;
+    node.tokens[tokenTypes.TOKEN_TYPE_OUT] = node.tokens[tokenTypes.TOKEN_TYPE_IN];
+    node.tokens[tokenTypes.TOKEN_TYPE_IN] = [];
 
     nodes.update({...node});
 }
@@ -33,7 +56,7 @@ const processDb = () => (node) => {
  * Test
  */
 const processUsers = () => (node) => {
-    node.tokens[tokenTypes.TOKEN_TYPE_IN].count++;
+    node.tokens[tokenTypes.TOKEN_TYPE_IN].push(getToken())
 
     nodes.update({...node});
 }
@@ -72,6 +95,9 @@ const nodes = new vis.DataSet([
 
 // create an array with edges
 var edges = new vis.DataSet([
+    /**
+     * Users to API gateways
+     */
     { from: 1, to: 2, arrows: 'to', tokenTypes: [tokenTypes.TOKEN_TYPE_IN] },
     { from: 2, to: 1, arrows: 'to', tokenTypes: [tokenTypes.TOKEN_TYPE_OUT] },
     
@@ -120,7 +146,7 @@ var network = new vis.Network(container, data, options);
  * Main event loop
  */
 const tick = () => {
-    console.log('tick');
+    console.log(`tick ${simTime++}`);
 
     nodes.forEach((node) => {
 
@@ -128,9 +154,8 @@ const tick = () => {
          * Handle each token type
          */
         Object.entries(node.tokens).forEach(entry => {
-            const [tokenType, tokenData] = entry;
+            const [tokenType, tokens] = entry;
    
-            let tokenCount  = tokenData.count;
             let connectedNodes = [];
 
             /** 
@@ -172,7 +197,7 @@ const tick = () => {
                 /**
                  * Out of tokens?
                  */
-                if (!tokenCount) {
+                if (!tokens.length) {
                     /**
                      * Edge not active this round
                      * 
@@ -186,9 +211,9 @@ const tick = () => {
                 /**
                  * Reduce the tokens at the source
                  */
-                tokenCount--;
+                const processToken = tokens.pop();
                 
-                connectedNode._tempTokens[tokenType].count++;
+                connectedNode._tempTokens[tokenType].push(processToken);
 
                 nodes.update([{ id: connectedNode.id, _tempTokens: connectedNode._tempTokens }]);
 
@@ -198,30 +223,24 @@ const tick = () => {
                 edges.update([{ id: connectedEdge.id, color: edgeConfig[tokenType].colorActive }])
             });
                   
-            /**
-             * All tokens have been distrubuted, update the parent node
-             * token count
-             */
-            tokenData.count = tokenCount;
-            node.tokens[tokenType] = tokenData;
+            node.tokens[tokenType] = tokens;
 
             nodes.update([{ id: node.id, tokens: node.tokens }]);
         })
     });
 
     /**
-     * Finalize: cleanup tempTokens and correct active token counts
+     * Finalize: move tokens to active list and cleanup tempTokens
      */
     nodes.forEach((node) => {
 
         Object.keys(node.tokens).forEach((tokenType) => {
-            node.tokens[tokenType].count = 
-                node.tokens[tokenType].count + node._tempTokens[tokenType].count;
+            node.tokens[tokenType] = node.tokens[tokenType].concat(node._tempTokens[tokenType]);
 
             /**
              * Tokens have been moved, zero the temp to be ready for the next round
              */
-            node._tempTokens[tokenType].count = 0;
+            node._tempTokens[tokenType] = [];
         });
         
     });
@@ -288,7 +307,7 @@ network.on("click", function (params) {
         
         console.log(activeNode);
 
-        activeNode.tokens[tokenTypes.TOKEN_TYPE_IN].count++;
+        activeNode.tokens[tokenTypes.TOKEN_TYPE_IN].push(getToken());
  
         nodes.update([{ id: activeNodeId, label: getNodeLabel(activeNode) }]);
 
