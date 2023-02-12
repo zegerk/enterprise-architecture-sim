@@ -1,26 +1,109 @@
-// create an array with nodes
-var nodes = new vis.DataSet([
-    { id: 1, label: "Node 1", tokens: 0, _tempTokens: 0 },
-    { id: 2, label: "Node 2", tokens: 0, _tempTokens: 0 },
-    { id: 3, label: "Node 3", tokens: 0, _tempTokens: 0 },
-    { id: 4, label: "Node 4", tokens: 0, _tempTokens: 0 },
-    { id: 5, label: "Node 5", tokens: 0, _tempTokens: 0 },
-    { id: 6, label: "Node 6", tokens: 0, _tempTokens: 0 },
+const tokenTypes = {
+    TOKEN_TYPE_IN: 'in',
+    TOKEN_TYPE_OUT: 'out'
+}
+
+const getToken = () => {
+    return {
+        count: 0
+    };
+}
+
+const getTokens = () => {
+    return {
+        [tokenTypes.TOKEN_TYPE_IN]: getToken(),
+        [tokenTypes.TOKEN_TYPE_OUT]: getToken(),
+    };
+}
+
+const getNodeLabel = (node) => {
+    return 'In : ' + node.tokens[tokenTypes.TOKEN_TYPE_IN].count + "\n" +
+           'Out : ' + node.tokens[tokenTypes.TOKEN_TYPE_OUT].count + "\n" + 
+           node.name;
+}
+
+const processDb = () => (node) => {
+    node.tokens[tokenTypes.TOKEN_TYPE_OUT].count = node.tokens[tokenTypes.TOKEN_TYPE_IN].count;
+    node.tokens[tokenTypes.TOKEN_TYPE_IN].count = 0;
+
+    nodes.update({...node});
+}
+
+/**
+ * Test
+ */
+const processUsers = () => (node) => {
+    node.tokens[tokenTypes.TOKEN_TYPE_IN].count++;
+
+    nodes.update({...node});
+}
+
+/**
+ * Where to send the token
+ */
+const routeDefault = () => (nodes) => {
+    return nodes.length ? [nodes[0]] : [];
+}
+
+const routeRandom = () => (nodes) => {
+    return nodes.length 
+        ? [nodes[Math.floor(Math.random() * nodes.length)]] 
+        : [];
+}
+
+/**
+ * Labels are set in the code
+ */
+const nodes = new vis.DataSet([
+    { id: 1, name: "users", 
+        route: routeDefault(), process: processUsers(), 
+        tokens: getTokens(), _tempTokens: getTokens(), shape: 'diamond',
+    },
+
+
+    { id: 2, name: "api gateway", route: routeRandom(), tokens: getTokens(), _tempTokens: getTokens(), shape: 'square' },
+    { id: 3, name: "service 1", route: routeDefault(), tokens: getTokens(), _tempTokens: getTokens(), shape: 'square' },
+    { id: 4, name: "service 2", route: routeDefault(), tokens: getTokens(), _tempTokens: getTokens(), shape: 'square' },
+    { id: 5, name: "service 3", route: routeDefault(), tokens: getTokens(), _tempTokens: getTokens(), shape: 'square' },
+    { id: 6, name: "db s1", route: routeDefault(), process: processDb(), tokens: getTokens(), _tempTokens: getTokens(), shape: 'database' },
+    { id: 7, name: "db s2", route: routeDefault(), process: processDb(), tokens: getTokens(), _tempTokens: getTokens(), shape: 'database' },
+    { id: 8, name: "db s3", route: routeDefault(), process: processDb(), tokens: getTokens(), _tempTokens: getTokens(), shape: 'database' },
 ]);
 
 // create an array with edges
-/**
- * To make lookups really easy use from - to as primary key
- */
 var edges = new vis.DataSet([
-    { id: '1-3', from: 1, to: 3, arrows: 'to' },
-    { id: '1-2', from: 1, to: 2, arrows: 'to' },
-    { id: '2-4', from: 2, to: 4, arrows: 'to' },
-    { id: '2-5', from: 2, to: 5, arrows: 'to' },
-    { id: '4-6', from: 4, to: 6, arrows: 'to' },
-    { id: '5-6', from: 5, to: 6, arrows: 'to' },
-    { id: '6-3', from: 6, to: 3, arrows: 'to' },
+    { from: 1, to: 2, arrows: 'to', tokenTypes: [tokenTypes.TOKEN_TYPE_IN] },
+    { from: 2, to: 1, arrows: 'to', tokenTypes: [tokenTypes.TOKEN_TYPE_OUT] },
+    
+    { from: 2, to: 3, arrows: 'to', tokenTypes: [tokenTypes.TOKEN_TYPE_IN] },
+    { from: 3, to: 2, arrows: 'to', tokenTypes: [tokenTypes.TOKEN_TYPE_OUT] },
+    
+    { from: 2, to: 4, arrows: 'to', tokenTypes: [tokenTypes.TOKEN_TYPE_IN] },
+    { from: 4, to: 2, arrows: 'to', tokenTypes: [tokenTypes.TOKEN_TYPE_OUT] },
+    
+    { from: 2, to: 5, arrows: 'to', tokenTypes: [tokenTypes.TOKEN_TYPE_IN] },
+    { from: 5, to: 2, arrows: 'to', tokenTypes: [tokenTypes.TOKEN_TYPE_OUT] },
+    
+    { from: 3, to: 6, arrows: 'to', tokenTypes: [tokenTypes.TOKEN_TYPE_IN] },
+    { from: 6, to: 3, arrows: 'to', tokenTypes: [tokenTypes.TOKEN_TYPE_OUT] },
+    
+    { from: 4, to: 7, arrows: 'to', tokenTypes: [tokenTypes.TOKEN_TYPE_IN] },
+    { from: 7, to: 4, arrows: 'to', tokenTypes: [tokenTypes.TOKEN_TYPE_OUT] },
+    
+    { from: 5, to: 8, arrows: 'to', tokenTypes: [tokenTypes.TOKEN_TYPE_IN] },
+    { from: 8, to: 5, arrows: 'to', tokenTypes: [tokenTypes.TOKEN_TYPE_OUT] },
 ]);
+
+const edgeConfig = {
+    [tokenTypes.TOKEN_TYPE_IN] : {
+        color: 'black',
+        colorActive: 'red',
+    },
+    [tokenTypes.TOKEN_TYPE_OUT] : {
+        color: 'gray',
+        colorActive: 'green',
+    }    
+}
 
 // create a network
 var container = document.getElementById("mynetwork");
@@ -41,53 +124,125 @@ const tick = () => {
 
     nodes.forEach((node) => {
 
-        let tokens  = node.tokens;
-
-        /** 
-         * Send the tokens, store the sent tokens in temp variable
-         * so the will not be sent again when the node is visted later
-         * on in the forEach
+        /**
+         * Handle each token type
          */
-        network.getConnectedNodes(node.id, 'to').forEach((activeNodeId) => { 
+        Object.entries(node.tokens).forEach(entry => {
+            const [tokenType, tokenData] = entry;
+   
+            let tokenCount  = tokenData.count;
+            let connectedNodes = [];
 
-            /**
-             * Get the edge
+            /** 
+             * Find the attached nodes with the correct edge type for the curren token type
+             * 
+             * Next distribute the tokens over the nodes
+             * 
+             * @todo the connected nodes can be cached
              */
-            let activeEdge = edges.get(node.id + '-' + activeNodeId);
+            network.getConnectedEdges(node.id, 'to').forEach((connectedEdgeId) => { 
+    
+                const connectedEdge = edges.get(connectedEdgeId);
+
+                /**
+                 * Connected edges returns both the parent and the child nodes
+                 * filter on all nodes for which the active nod is the parent (from)
+                 * 
+                 * Only send tokens over the edge accepting the current token type
+                 */
+                if (connectedEdge.from != node.id || !connectedEdge.tokenTypes.includes(tokenType)) {
+                    return;
+                }
+
+                /**
+                 * Collect the connected node
+                 */
+                const connectedNodeId = connectedEdge.to;
+                connectedNodes.push({
+                    connectedNode: nodes.get(connectedNodeId),
+                    connectedEdge
+                });
+    
+            });
 
             /**
-             * Any tokens left on source?
-             */           
-            if (tokens) {
-                tokens--;
-                
-                let activeNode = nodes.get(activeNodeId);
-                let activeNodeTokens = activeNode._tempTokens;
-
-                activeNodeTokens++;
-                
-                nodes.update([{ id: activeNodeId, _tempTokens: activeNodeTokens }]);
-
-                edges.update([{ id: activeEdge.id, color: 'red' }])
-            } else {
+             * Second loop - send tokens to the connected nodes
+             */
+            node.route(connectedNodes).forEach(({connectedNode, connectedEdge}) => {
                 /**
-                 * Edge not active this round
+                 * Out of tokens?
                  */
-                edges.update([{ id: activeEdge.id, color: 'black' }])
-            }
+                if (!tokenCount) {
+                    /**
+                     * Edge not active this round
+                     * 
+                     * @todo this fails if an edge can handle multiple token types
+                     */
+                    edges.update([{ id: connectedEdge.id, color: edgeConfig[tokenType].color }])
+
+                    return;
+                }    
+
+                /**
+                 * Reduce the tokens at the source
+                 */
+                tokenCount--;
+                
+                connectedNode._tempTokens[tokenType].count++;
+
+                nodes.update([{ id: connectedNode.id, _tempTokens: connectedNode._tempTokens }]);
+
+                /**
+                 * Show edge as active
+                 */
+                edges.update([{ id: connectedEdge.id, color: edgeConfig[tokenType].colorActive }])
+            });
+                  
+            /**
+             * All tokens have been distrubuted, update the parent node
+             * token count
+             */
+            tokenData.count = tokenCount;
+            node.tokens[tokenType] = tokenData;
+
+            nodes.update([{ id: node.id, tokens: node.tokens }]);
+        })
+    });
+
+    /**
+     * Finalize: cleanup tempTokens and correct active token counts
+     */
+    nodes.forEach((node) => {
+
+        Object.keys(node.tokens).forEach((tokenType) => {
+            node.tokens[tokenType].count = 
+                node.tokens[tokenType].count + node._tempTokens[tokenType].count;
+
+            /**
+             * Tokens have been moved, zero the temp to be ready for the next round
+             */
+            node._tempTokens[tokenType].count = 0;
         });
-
-        nodes.update([{ id: node.id, tokens }]);
+        
     });
 
-    nodes.forEach((activeNode) => {
-        let tokens = activeNode.tokens + activeNode._tempTokens;
-        let label = `Tokens ${tokens}\n${activeNode.id}`;
-    
-        nodes.update([{ id: activeNode.id, tokens, _tempTokens: 0, label }]);    
+    /**
+     * Process all tokens in all nodes
+     * 
+     * @todo - do this in a separate tick cycle to simulate "slow" processing?
+     */
+    nodes.forEach((node) => {
+        node.process && node.process(node)
     });
 
+    /**
+     * Update all the labels
+     */
+    nodes.forEach((node) =>{
+        let label = getNodeLabel(node);
 
+        nodes.update([{ ...node, label }]);
+    })
 
         /*
         network.getConnectedEdges(node.id).forEach((edgeId => {
@@ -130,11 +285,12 @@ network.on("click", function (params) {
     if (activeNodeId) {
         // var newColor = "#" + Math.floor(Math.random() * 255 * 255 * 255).toString(16);
         let activeNode = nodes.get(activeNodeId);
-        console.log(activeNode);
-        let tokens = activeNode.tokens++;
-        let label = `Tokens ${tokens}`;
         
-        nodes.update([{ id: activeNodeId, label }]);
+        console.log(activeNode);
+
+        activeNode.tokens[tokenTypes.TOKEN_TYPE_IN].count++;
+ 
+        nodes.update([{ id: activeNodeId, label: getNodeLabel(activeNode) }]);
 
 
     };
