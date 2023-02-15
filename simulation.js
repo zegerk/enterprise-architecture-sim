@@ -8,7 +8,19 @@ let simTime = 0;
  */
 const tokenTypes = {
     TOKEN_TYPE_IN: 'in',
-    TOKEN_TYPE_OUT: 'out'
+    TOKEN_TYPE_OUT: 'out',
+    TOKEN_TYPE_FAIL: 'fail',
+}
+
+/**
+ * Tokens factory for the nodes
+ */
+const getTokens = () => {
+    return {
+        [tokenTypes.TOKEN_TYPE_IN]: [],
+        [tokenTypes.TOKEN_TYPE_OUT]: [],
+        [tokenTypes.TOKEN_TYPE_FAIL]: [],
+    };
 }
 
 /**
@@ -21,25 +33,36 @@ const getToken = () => {
 }
 
 /**
- * Tokens factory for the nodes
- */
-const getTokens = () => {
-    return {
-        [tokenTypes.TOKEN_TYPE_IN]: [],
-        [tokenTypes.TOKEN_TYPE_OUT]: [],
-    };
-}
-
-/**
  * @todo a bit crude.
  * 
  * @param {*} node 
  * @returns 
  */
 const getNodeLabel = (node) => {
-    return 'In : ' + node.tokens[tokenTypes.TOKEN_TYPE_IN].length + "\n" +
-           'Out : ' + node.tokens[tokenTypes.TOKEN_TYPE_OUT].length + "\n" + 
-           node.name;
+
+    let age = {};
+    let nodeCount ={};
+    let label = '';
+    
+    Object.entries(tokenTypes).forEach(typeEntry => {
+        let [tokenId, tokenType] = typeEntry;
+
+        nodeCount[tokenType] = node.tokens[tokenTypes.TOKEN_TYPE_IN].length;
+
+        age[tokenType] = 0;
+
+        if (nodeCount[tokenType]) {
+            age[tokenTypes.TOKEN_TYPE_IN] = simTime - node.tokens[tokenTypes.TOKEN_TYPE_IN].reduce(
+                (accumulator, token) =>
+                    accumulator + token.created, 0
+            ) / nodeCount[tokenType];
+        }
+
+        label += `${tokenType} : ${node.tokens[tokenType].length} ${Math.round(age[tokenType])} \n`;
+           
+    });
+
+    return label + node.name;
 }
 
 /**
@@ -53,10 +76,40 @@ const processDb = () => (node) => {
 }
 
 /**
- * Test
+ * Process user
  */
+const USER_TIMEOUT = 5;
+
 const processUsers = () => (node) => {
-    node.tokens[tokenTypes.TOKEN_TYPE_IN].push(getToken())
+
+    /**
+     * Create a token every tick
+     */
+    node.tokens[tokenTypes.TOKEN_TYPE_IN].push(getToken());
+
+    node.tokens[tokenTypes.TOKEN_TYPE_IN].forEach((token, index) => {
+        /**
+         * Simulated "timeout" on tokens
+         */
+        if (simTime - token.created > USER_TIMEOUT) {
+
+            node.tokens[tokenTypes.TOKEN_TYPE_FAIL].push(
+                node.tokens[tokenTypes.TOKEN_TYPE_IN][index]
+            );
+
+            /**
+             * Prep the token for removal
+             */
+            node.tokens[tokenTypes.TOKEN_TYPE_IN][index] = false
+
+        }
+    })
+
+    /**
+     * Remove the tokens
+     */
+    node.tokens[tokenTypes.TOKEN_TYPE_IN] =
+        node.tokens[tokenTypes.TOKEN_TYPE_IN].filter((node) => node !== false);
 
     nodes.update({...node});
 }
@@ -209,9 +262,12 @@ const tick = () => {
                 }    
 
                 /**
-                 * Reduce the tokens at the source
+                 * Reduce the tokens at the source - take a token from the start of the 
+                 * array (aka the oldest token)
+                 * 
+                 * @todo : make this configurable
                  */
-                const processToken = tokens.pop();
+                const processToken = tokens.shift();
                 
                 connectedNode._tempTokens[tokenType].push(processToken);
 
@@ -285,6 +341,7 @@ const eventLoop = setInterval(tick,1000);
 
 network.on("click", function (params) {
     params.event = "[original event]";
+    /*
     console.log(JSON.stringify(
         params,
         null,
@@ -295,6 +352,7 @@ network.on("click", function (params) {
         "click event, getNodeAt returns: " +
         this.getNodeAt(params.pointer.DOM)
     );
+    */
 
     let activeNodeId = this.getNodeAt(params.pointer.DOM);
 
@@ -305,7 +363,7 @@ network.on("click", function (params) {
         // var newColor = "#" + Math.floor(Math.random() * 255 * 255 * 255).toString(16);
         let activeNode = nodes.get(activeNodeId);
         
-        console.log(activeNode);
+        //console.log(activeNode);
 
         activeNode.tokens[tokenTypes.TOKEN_TYPE_IN].push(getToken());
  
