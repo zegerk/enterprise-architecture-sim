@@ -41,7 +41,7 @@ const getToken = () => {
 const getNodeLabel = (node) => {
 
     let age = {};
-    let nodeCount ={};
+    let nodeCount = {};
     let label = '';
     
     Object.entries(tokenTypes).forEach(typeEntry => {
@@ -62,6 +62,9 @@ const getNodeLabel = (node) => {
            
     });
 
+    const cpuLoad = Math.round((node.load / node.cores) * 100);
+    label += `Load ${cpuLoad}%\n`;
+
     return label + node.name;
 }
 
@@ -69,10 +72,23 @@ const getNodeLabel = (node) => {
  * Process the tokens my converting in tokens to out tokens
  */
 const processDb = () => (node) => {
-    node.tokens[tokenTypes.TOKEN_TYPE_OUT] = node.tokens[tokenTypes.TOKEN_TYPE_IN];
-    node.tokens[tokenTypes.TOKEN_TYPE_IN] = [];
+
+    /**
+     * Return false if nothing to do, used for "cpu" usage
+     */
+    if (!node.tokens[tokenTypes.TOKEN_TYPE_IN].length) {
+        return false;
+    }
+
+    const token = node.tokens[tokenTypes.TOKEN_TYPE_IN].shift();
+    node.tokens[tokenTypes.TOKEN_TYPE_OUT].push(token);
 
     nodes.update({...node});
+
+    /**
+     * Active
+     */
+    return true;
 }
 
 /**
@@ -87,6 +103,12 @@ const processUsers = () => (node) => {
      */
     node.tokens[tokenTypes.TOKEN_TYPE_IN].push(getToken());
 
+
+    /**
+     * Check for timeout on tokens
+     * 
+     * @todo move this to a helper function
+     */
     node.tokens[tokenTypes.TOKEN_TYPE_IN].forEach((token, index) => {
         /**
          * Simulated "timeout" on tokens
@@ -106,21 +128,26 @@ const processUsers = () => (node) => {
     })
 
     /**
-     * Remove the tokens
+     * Remove the timed out tokens
      */
     node.tokens[tokenTypes.TOKEN_TYPE_IN] =
         node.tokens[tokenTypes.TOKEN_TYPE_IN].filter((node) => node !== false);
 
     nodes.update({...node});
+
+    return true;
 }
 
 /**
- * Where to send the token
+ * Send the token to the first route
  */
 const routeDefault = () => (nodes) => {
     return nodes.length ? [nodes[0]] : [];
 }
 
+/**
+ * Send the token to a random route
+ */
 const routeRandom = () => (nodes) => {
     return nodes.length 
         ? [nodes[Math.floor(Math.random() * nodes.length)]] 
@@ -133,32 +160,44 @@ const routeRandom = () => (nodes) => {
 const nodes = new vis.DataSet([
     { id: 1, name: "users", 
         route: routeDefault(), process: processUsers(), 
-        tokens: getTokens(), _tempTokens: getTokens(), shape: 'diamond',
+        tokens: getTokens(), _tempTokens: getTokens(), 
+        shape: 'box', color: 'lightgreen',
+        cores: 4,
     },
 
 
-    { id: 2, name: "api gateway", route: routeRandom(), tokens: getTokens(), _tempTokens: getTokens(), shape: 'square' },
-    { id: 3, name: "service 1", route: routeDefault(), tokens: getTokens(), _tempTokens: getTokens(), shape: 'square' },
-    { id: 4, name: "service 2", route: routeDefault(), tokens: getTokens(), _tempTokens: getTokens(), shape: 'square' },
-    { id: 5, name: "service 3", route: routeDefault(), tokens: getTokens(), _tempTokens: getTokens(), shape: 'square' },
+    { id: 2, name: "api gateway", route: routeRandom(), tokens: getTokens(), _tempTokens: getTokens(), shape: 'box' },
+    { id: 3, name: "service 1", route: routeDefault(), tokens: getTokens(), _tempTokens: getTokens(), shape: 'box' },
+    { id: 4, name: "service 2", route: routeDefault(), tokens: getTokens(), _tempTokens: getTokens(), shape: 'box' },
+    { id: 5, name: "service 3", route: routeDefault(), tokens: getTokens(), _tempTokens: getTokens(), shape: 'box' },
     { id: 6, name: "db s1", route: routeDefault(), process: processDb(), tokens: getTokens(), _tempTokens: getTokens(), shape: 'database' },
     { id: 7, name: "db s2", route: routeDefault(), process: processDb(), tokens: getTokens(), _tempTokens: getTokens(), shape: 'database' },
     { id: 8, name: "db s3", route: routeDefault(), process: processDb(), tokens: getTokens(), _tempTokens: getTokens(), shape: 'database' },
 ]);
+
+nodes.forEach((node) => {
+    node.cores = node.cores ?? 1;
+    node.load = 0;
+})
 
 // create an array with edges
 var edges = new vis.DataSet([
     /**
      * Users to API gateways
      */
-    { from: 1, to: 2, arrows: 'to', tokenTypes: [tokenTypes.TOKEN_TYPE_IN] },
-    { from: 2, to: 1, arrows: 'to', tokenTypes: [tokenTypes.TOKEN_TYPE_OUT] },
+    { from: 1, to: 2,
+      arrows: 'to', tokenTypes: [tokenTypes.TOKEN_TYPE_IN],
+      bandwidth: 2,
+    },
+    { from: 2, to: 1, arrows: 'to', tokenTypes: [tokenTypes.TOKEN_TYPE_OUT],
+      bandwidth: 2,
+    },
     
-    { from: 2, to: 3, arrows: 'to', tokenTypes: [tokenTypes.TOKEN_TYPE_IN] },
-    { from: 3, to: 2, arrows: 'to', tokenTypes: [tokenTypes.TOKEN_TYPE_OUT] },
+    { from: 2, to: 3, arrows: 'to', tokenTypes: [tokenTypes.TOKEN_TYPE_IN], bandwidth: 2, },
+    { from: 3, to: 2, arrows: 'to', tokenTypes: [tokenTypes.TOKEN_TYPE_OUT], bandwidth: 2, },
     
-    { from: 2, to: 4, arrows: 'to', tokenTypes: [tokenTypes.TOKEN_TYPE_IN] },
-    { from: 4, to: 2, arrows: 'to', tokenTypes: [tokenTypes.TOKEN_TYPE_OUT] },
+    { from: 2, to: 4, arrows: 'to', tokenTypes: [tokenTypes.TOKEN_TYPE_IN], bandwidth: 2, },
+    { from: 4, to: 2, arrows: 'to', tokenTypes: [tokenTypes.TOKEN_TYPE_OUT], bandwidth: 2, },
     
     { from: 2, to: 5, arrows: 'to', tokenTypes: [tokenTypes.TOKEN_TYPE_IN] },
     { from: 5, to: 2, arrows: 'to', tokenTypes: [tokenTypes.TOKEN_TYPE_OUT] },
@@ -172,6 +211,13 @@ var edges = new vis.DataSet([
     { from: 5, to: 8, arrows: 'to', tokenTypes: [tokenTypes.TOKEN_TYPE_IN] },
     { from: 8, to: 5, arrows: 'to', tokenTypes: [tokenTypes.TOKEN_TYPE_OUT] },
 ]);
+
+/**
+ * Set the width accoring to the bandwidth
+ */
+edges.forEach((edge) => {
+    edge.width = edge.bandwidth ? edge.bandwidth * 2 : 1;
+})
 
 const edgeConfig = {
     [tokenTypes.TOKEN_TYPE_IN] : {
@@ -192,7 +238,21 @@ var data = {
     edges: edges,
 };
 
-var options = {};
+// https://visjs.github.io/vis-network/examples/network/physics/physicsConfiguration.html
+const options = {
+    "edges": {
+      "smooth": {
+        "forceDirection": "none"
+      }
+    },
+    "physics": {
+      "barnesHut": {
+        "springLength": 200
+      },
+      "minVelocity": 0.75
+    }
+  }
+
 var network = new vis.Network(container, data, options);
 
 /**
@@ -236,6 +296,7 @@ const tick = () => {
                  * Collect the connected node
                  */
                 const connectedNodeId = connectedEdge.to;
+
                 connectedNodes.push({
                     connectedNode: nodes.get(connectedNodeId),
                     connectedEdge
@@ -248,35 +309,42 @@ const tick = () => {
              */
             node.route(connectedNodes).forEach(({connectedNode, connectedEdge}) => {
                 /**
-                 * Out of tokens?
-                 */
-                if (!tokens.length) {
-                    /**
-                     * Edge not active this round
-                     * 
-                     * @todo this fails if an edge can handle multiple token types
-                     */
-                    edges.update([{ id: connectedEdge.id, color: edgeConfig[tokenType].color }])
-
-                    return;
-                }    
-
-                /**
                  * Reduce the tokens at the source - take a token from the start of the 
                  * array (aka the oldest token)
                  * 
                  * @todo : make this configurable
                  */
-                const processToken = tokens.shift();
+                let bandwidth = connectedEdge.bandwidth ?? 1
                 
-                connectedNode._tempTokens[tokenType].push(processToken);
-
-                nodes.update([{ id: connectedNode.id, _tempTokens: connectedNode._tempTokens }]);
-
                 /**
-                 * Show edge as active
+                 * Reset the edge color
                  */
-                edges.update([{ id: connectedEdge.id, color: edgeConfig[tokenType].colorActive }])
+                let edgeLabel = '0%';
+                edges.update([{ id: connectedEdge.id, label: edgeLabel, color: edgeConfig[tokenType].color }])
+
+                for (let idx = 0; idx < bandwidth; idx++) {
+
+                    /**
+                     * Out of tokens?
+                     */
+                    if (tokens.length) {
+
+                        const processToken = tokens.shift();
+                        
+                        connectedNode._tempTokens[tokenType].push(processToken);
+
+                        nodes.update([{ id: connectedNode.id, _tempTokens: connectedNode._tempTokens }]);
+
+                        /**
+                         * Show edge as active
+                         */
+                        edgelabel = Math.round(100 * ((idx + 1) / bandwidth)) + '%';
+                        edges.update([{ 
+                            id: connectedEdge.id, color: edgeConfig[tokenType].colorActive,
+                            label: edgelabel,
+                        }]);
+                    }
+                }
             });
                   
             node.tokens[tokenType] = tokens;
@@ -307,8 +375,22 @@ const tick = () => {
      * @todo - do this in a separate tick cycle to simulate "slow" processing?
      */
     nodes.forEach((node) => {
-        node.process && node.process(node)
+        if (!node.process) {
+            return;
+        } 
+        
+        /**
+         * Active processes
+         */
+        let load = 0;
+
+        for (let idx = 0; idx < node.cores; idx++) {
+            load += node.process(node);
+        }
+
+        nodes.update([{ ...node, load }]);
     });
+
 
     /**
      * Update all the labels
