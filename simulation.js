@@ -1,4 +1,9 @@
 /**
+ * Time in ms between two simulation ticks
+ */
+const TICK_DELAY_MS = 250;
+
+/**
  * Simulation timer in ticks
  */
 let simTime = 0;
@@ -189,7 +194,11 @@ var edges = new vis.DataSet([
       arrows: 'to', tokenTypes: [tokenTypes.TOKEN_TYPE_IN],
       bandwidth: 2,
     },
-    { from: 2, to: 1, arrows: 'to', tokenTypes: [tokenTypes.TOKEN_TYPE_OUT],
+    /**
+     * API gateway to users
+     */
+    { from: 2, to: 1, arrows: 'to', 
+      tokenTypes: [tokenTypes.TOKEN_TYPE_OUT, tokenTypes.TOKEN_TYPE_FAIL],
       bandwidth: 2,
     },
     
@@ -259,7 +268,8 @@ var network = new vis.Network(container, data, options);
  * Main event loop
  */
 const tick = () => {
-    console.log(`tick ${simTime++}`);
+    
+    simTime++;
 
     nodes.forEach((node) => {
 
@@ -401,6 +411,25 @@ const tick = () => {
         nodes.update([{ ...node, label }]);
     })
 
+    /**
+     * Test graphing on usernode
+     */
+
+    performanceChart.data.labels.push(simTime);
+    performanceChart.data.datasets[0].data.push(
+        nodes.get(1).tokens[tokenTypes.TOKEN_TYPE_FAIL].length 
+    );
+
+    if (simTime > 100) {
+        performanceChart.data.labels.shift();
+        performanceChart.data.datasets[0].data.shift();
+
+        performanceChart.scales.x.options.min = simTime - 100;
+    }
+
+    performanceChart.update();
+
+
         /*
         network.getConnectedEdges(node.id).forEach((edgeId => {
            
@@ -415,7 +444,7 @@ const tick = () => {
     
 }
 
-const eventLoop = setInterval(tick,1000);
+const eventLoop = setInterval(tick, TICK_DELAY_MS);
 
 /**
  * EVents
@@ -454,4 +483,20 @@ network.on("click", function (params) {
 
     };
 
+});
+
+/**
+ * Charting stuff
+ */
+var performanceChartRef = document.getElementById("performanceChart");
+var performanceChart = new Chart(performanceChartRef, {
+    type: 'line',
+    data: {
+        datasets: [{
+            data: []
+        }]
+    },
+    options: {
+        responsive: true,
+    },
 });
