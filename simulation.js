@@ -3,6 +3,8 @@ import { getNodeLabel } from './core/node.js';
 
 import { loadNetwork, edgeConfig } from './examples/demo_1.js';
 
+import { addUserRequest } from './components/user.js';
+
 /**
  * Time in ms between two simulation ticks
  */
@@ -17,11 +19,6 @@ const NODE_HISTORY_MAX_DP = 100;
  * Simulation timer in ticks
  */
 let simTime = 0;
-
-/**
- * Load the network
- */
-const container = document.getElementById('mynetwork');
 
 // https://visjs.github.io/vis-network/examples/network/physics/physicsConfiguration.html
 const options = {
@@ -42,7 +39,22 @@ const nodes = new vis.DataSet();
 const edges = new vis.DataSet();
 
 loadNetwork({ nodes, edges });
+
+/**
+ * Basic housekeeping
+ * 
+ * @todo move this to generic function
+ */
+nodes.forEach((node) => { 
+    node.cores = node.cores ?? 1;
+    node.load = [];
+});
+
+edges.forEach((edge) => { 
+    edge.load = [];
+});
   
+const container = document.getElementById('mynetwork');
 const network = new vis.Network(
     container, 
     { nodes, edges }, 
@@ -298,11 +310,9 @@ network.on("click", function (params) {
         // var newColor = "#" + Math.floor(Math.random() * 255 * 255 * 255).toString(16);
         let activeNode = nodes.get(activeNodeId);
         
-        //console.log(activeNode);
+        addUserRequest({ node: activeNode, simTime});
 
-        activeNode.tokens[tokenTypes.TOKEN_TYPE_REQ].push(getToken());
- 
-        nodes.update([{ id: activeNodeId, label: getNodeLabel({ activeNode, simTime }) }]);
+        nodes.update([{ id: activeNodeId, tokens: activeNode.tokens }]);
 
 
     };

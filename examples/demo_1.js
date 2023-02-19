@@ -21,9 +21,6 @@ const loadNetwork = ({ nodes, edges }) => {
      * Housekeeping
      */
     nodes.forEach((node) => {
-        node.cores = node.cores ?? 1;
-        node.load = [];
-
         /**
          * Layout stuff
          */
@@ -35,11 +32,10 @@ const loadNetwork = ({ nodes, edges }) => {
     })
 
     /**
-     * Set the width accoring to the bandwidth
+     * Edges houskeeping
      */
     edges.forEach((edge) => {
         edge.width = edge.bandwidth ? edge.bandwidth * 2 : 1;
-        edge.load = [];
 
         edge.arrows = {
             to: {

@@ -12,13 +12,7 @@ const process = ({ nodes }) => ({ node, simTime, coreId }) => {
          * waiting user token so we can match its unique id later with
          * the response token
          */
-        const tokenReq = getToken({ simTime });
-        const tokenWait = getToken({ simTime });
-
-        tokenWait.id = tokenReq.id;
-
-        node.tokens[tokenTypes.TOKEN_TYPE_REQ].push(tokenReq);
-        node.tokens[tokenTypes.TOKEN_TYPE_WAIT].push(tokenWait);
+        addUserRequest({ node, simTime });
     }
 
     timeoutTokens({ 
@@ -45,4 +39,14 @@ const process = ({ nodes }) => ({ node, simTime, coreId }) => {
     return true;
 }
 
-export { process };
+const addUserRequest = ({ node, simTime }) => {
+    const tokenReq = getToken({ simTime });
+    const tokenWait = getToken({ simTime });
+
+    tokenWait.id = tokenReq.id;
+
+    node.tokens[tokenTypes.TOKEN_TYPE_REQ].push(tokenReq);
+    node.tokens[tokenTypes.TOKEN_TYPE_WAIT].push(tokenWait);
+};
+
+export { process, addUserRequest };
