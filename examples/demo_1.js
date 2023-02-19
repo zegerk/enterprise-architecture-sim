@@ -23,6 +23,15 @@ const loadNetwork = ({ nodes, edges }) => {
     nodes.forEach((node) => {
         node.cores = node.cores ?? 1;
         node.load = 0;
+
+        /**
+         * Layout stuff
+         */
+        node.font = { multi: 'markdown' },
+        node.margin = { top: 2, left: 2, bottom: 2, right: 2 };
+
+        node.heightConstraint = { minimum: 100 };
+        node.widthConstraint = { minimum: 100 };
     })
 
     /**
@@ -30,6 +39,14 @@ const loadNetwork = ({ nodes, edges }) => {
      */
     edges.forEach((edge) => {
         edge.width = edge.bandwidth ? edge.bandwidth * 2 : 1;
+
+        edge.arrows = {
+            to: {
+                enabled: true,
+                type: 'arrow',
+                scaleFactor: 0.5,
+            }
+        }
     })
 }
 
@@ -71,34 +88,34 @@ const loadEdges = ({ edges }) => {
          * Users to API gateways
          */
         { from: 1, to: 2,
-          arrows: 'to', tokenTypes: [tokenTypes.TOKEN_TYPE_REQ],
-          bandwidth: 2,
+          tokenTypes: [tokenTypes.TOKEN_TYPE_REQ],
+          bandwidth: 4,
         },
         /**
          * API gateway to users
          */
-        { from: 2, to: 1, arrows: 'to', 
+        { from: 2, to: 1,
           tokenTypes: [tokenTypes.TOKEN_TYPE_RES],
-          bandwidth: 2,
+          bandwidth: 4,
         },
         
-        { from: 2, to: 3, arrows: 'to', tokenTypes: [tokenTypes.TOKEN_TYPE_API], bandwidth: 2, },
-        { from: 3, to: 2, arrows: 'to', tokenTypes: [tokenTypes.TOKEN_TYPE_RES], bandwidth: 2, },
+        { from: 2, to: 3, tokenTypes: [tokenTypes.TOKEN_TYPE_API], bandwidth: 3, },
+        { from: 3, to: 2, tokenTypes: [tokenTypes.TOKEN_TYPE_RES], bandwidth: 3, },
         
-        { from: 2, to: 4, arrows: 'to', tokenTypes: [tokenTypes.TOKEN_TYPE_API], bandwidth: 2, },
-        { from: 4, to: 2, arrows: 'to', tokenTypes: [tokenTypes.TOKEN_TYPE_RES], bandwidth: 2, },
+        { from: 2, to: 4, tokenTypes: [tokenTypes.TOKEN_TYPE_API], bandwidth: 3, },
+        { from: 4, to: 2, tokenTypes: [tokenTypes.TOKEN_TYPE_RES], bandwidth: 3, },
         
-        { from: 2, to: 5, arrows: 'to', tokenTypes: [tokenTypes.TOKEN_TYPE_API] },
-        { from: 5, to: 2, arrows: 'to', tokenTypes: [tokenTypes.TOKEN_TYPE_RES] },
+        { from: 2, to: 5, tokenTypes: [tokenTypes.TOKEN_TYPE_API], bandwidth: 3 },
+        { from: 5, to: 2, tokenTypes: [tokenTypes.TOKEN_TYPE_RES], bandwidth: 3 },
         
-        { from: 3, to: 6, arrows: 'to', tokenTypes: [tokenTypes.TOKEN_TYPE_DB] },
-        { from: 6, to: 3, arrows: 'to', tokenTypes: [tokenTypes.TOKEN_TYPE_RES] },
+        { from: 3, to: 6, tokenTypes: [tokenTypes.TOKEN_TYPE_DB], bandwidth: 3 },
+        { from: 6, to: 3, tokenTypes: [tokenTypes.TOKEN_TYPE_RES], bandwidth: 3 },
         
-        { from: 4, to: 7, arrows: 'to', tokenTypes: [tokenTypes.TOKEN_TYPE_DB] },
-        { from: 7, to: 4, arrows: 'to', tokenTypes: [tokenTypes.TOKEN_TYPE_RES] },
+        { from: 4, to: 7, tokenTypes: [tokenTypes.TOKEN_TYPE_DB], bandwidth: 3 },
+        { from: 7, to: 4, tokenTypes: [tokenTypes.TOKEN_TYPE_RES], bandwidth: 3 },
         
-        { from: 5, to: 8, arrows: 'to', tokenTypes: [tokenTypes.TOKEN_TYPE_DB] },
-        { from: 8, to: 5, arrows: 'to', tokenTypes: [tokenTypes.TOKEN_TYPE_RES] },
+        { from: 5, to: 8, tokenTypes: [tokenTypes.TOKEN_TYPE_DB], bandwidth: 3 },
+        { from: 8, to: 5, tokenTypes: [tokenTypes.TOKEN_TYPE_RES], bandwidth: 3 },
     ]);
 }
 

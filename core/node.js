@@ -8,33 +8,39 @@ import { getToken } from "./tokens.js";
  */
 const getNodeLabel = ({ node, simTime }) => {
 
-    let age = {};
-    let nodeCount = {};
-    let label = '';
-    
+    const MAX_LABEL_ROWS = 5;
+
+    let label = `_${node.name}_\n`;
+    let rowIdx = 0;
 
     Object.entries(node.tokens).forEach((nodeTokenType) => {
         let [tokenType] = nodeTokenType;
 
-        nodeCount[tokenType] = node.tokens[tokenType].length;
+        const count = node.tokens[tokenType].length;
+        let age = 0;
 
-        age[tokenType] = 0;
-
-        if (nodeCount[tokenType]) {
-            age[tokenType] = simTime - node.tokens[tokenType].reduce(
+        if (count) {
+            age = simTime - node.tokens[tokenType].reduce(
                 (accumulator, token) =>
                     accumulator + token.created, 0
-            ) / nodeCount[tokenType];
-        }
+            ) / count;
 
-        label += `${tokenType} : ${node.tokens[tokenType].length} ${Math.round(age[tokenType])} \n`;
-           
+            label += `${tokenType} : ${count} ${Math.round(age)} \n`;
+            rowIdx++;
+        }
     });
+
+    for (let i = 0; i < (MAX_LABEL_ROWS - rowIdx); i++) {
+        /**
+         * Vertical alignment is not yet possible
+         */
+        label += `\n`;
+    }
 
     const cpuLoad = Math.round((node.load / node.cores) * 100);
     label += `Load ${cpuLoad}%\n`;
 
-    return label + node.name;
+    return label;
 }
 
 /**

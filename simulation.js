@@ -27,7 +27,7 @@ const options = {
     },
     "physics": {
       "barnesHut": {
-        "springLength": 200
+        "springLength": 300
       },
       "minVelocity": 0.75
     }
@@ -186,8 +186,8 @@ const tick = () => {
          * @todo Timeouts on tokens are called for each core.. there
          * should be a housekeeping / OS call 
          */
-        for (let idx = 0; idx < node.cores; idx++) {
-            load += node.process({ node, simTime });
+        for (let coreId = 0; coreId < node.cores; coreId++) {
+            load += node.process({ node, simTime, coreId });
         }
 
         nodes.update([{ ...node, load }]);
