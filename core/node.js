@@ -37,7 +37,13 @@ const getNodeLabel = ({ node, simTime }) => {
         label += `\n`;
     }
 
-    const cpuLoad = Math.round((node.load / node.cores) * 100);
+    const averageLoad = node.load.reduce(
+        (accumulator, currentValue) => accumulator + currentValue,
+        0
+    ) / node.load.length;
+
+    const cpuLoad = Math.round((averageLoad / node.cores) * 100);
+
     label += `Load ${cpuLoad}%\n`;
 
     return label;

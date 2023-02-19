@@ -9,6 +9,11 @@ import { loadNetwork, edgeConfig } from './examples/demo_1.js';
 const TICK_DELAY_MS = 250;
 
 /**
+ * Maximum number of datapoints store store per node
+ */
+const NODE_HISTORY_MAX_DP = 100;
+
+/**
  * Simulation timer in ticks
  */
 let simTime = 0;
@@ -54,7 +59,8 @@ const tick = () => {
     nodes.forEach((node) => {
 
         /**
-         * Handle each token type
+         * Handle each token type - fetch the connected nodes for each
+         * node and distribute the tokens
          */
         Object.entries(node.tokens).forEach(entry => {
             const [tokenType, tokens] = entry;
@@ -74,7 +80,7 @@ const tick = () => {
 
                 /**
                  * Connected edges returns both the parent and the child nodes
-                 * filter on all nodes for which the active nod is the parent (from)
+                 * filter on all nodes for which the active node is the parent (from)
                  * 
                  * Only send tokens over the edge accepting the current token type
                  */
@@ -95,6 +101,8 @@ const tick = () => {
             });
 
             /**
+             * Edges for the current node have been retrieved
+             * 
              * Second loop - send tokens to the connected nodes
              */
             node.route(connectedNodes).forEach(({connectedNode, connectedEdge}) => {
@@ -105,14 +113,7 @@ const tick = () => {
                  * @todo : make this configurable
                  */
                 let bandwidth = connectedEdge.bandwidth ?? 1
-                
-                /**
-                 * Reset the edge color
-                 */
-                let edgeLabel = '0%';
-                edges.update([{ 
-                    id: connectedEdge.id, label: edgeLabel, color: edgeConfig[tokenType].color
-                 }])
+                let tokensSent = 0;
 
                 for (let idx = 0; idx < bandwidth; idx++) {
 
@@ -120,8 +121,9 @@ const tick = () => {
                      * Out of tokens?
                      */
                     if (tokens.length) {
-
                         const processToken = tokens.shift();
+
+                        tokensSent++;
 
                         /**
                          * Set the received timestamp on the token so we can use
@@ -132,17 +134,41 @@ const tick = () => {
                         connectedNode._tempTokens[tokenType].push(processToken);
 
                         nodes.update([{ id: connectedNode.id, _tempTokens: connectedNode._tempTokens }]);
-
-                        /**
-                         * Show edge as active
-                         */
-                        const edgelabel = Math.round(100 * ((idx + 1) / bandwidth)) + '%';
-                        edges.update([{ 
-                            id: connectedEdge.id, color: edgeConfig[tokenType].colorActive,
-                            label: edgelabel,
-                        }]);
                     }
                 }
+
+                /**
+                 * Add the load to the history
+                 */
+                connectedEdge.load.push(tokensSent);
+
+                /**
+                 * Rotate the array
+                 */
+                if (connectedEdge.load.length > NODE_HISTORY_MAX_DP) {
+                    connectedEdge.load.shift();
+                }
+
+                /**
+                 * Compute the average load of the edge
+                 * 
+                 * @todo create getEdgeLabel function..
+                 */
+                const averageLoad = connectedEdge.load.reduce(
+                    (accumulator, currentValue) => accumulator + currentValue,
+                    0
+                ) / connectedEdge.load.length;
+            
+                const edgelabel = Math.round(100 * (averageLoad / bandwidth)) + '%';
+
+                edges.update([{ 
+                    id: connectedEdge.id,
+                    color: tokensSent ? 
+                            edgeConfig[tokenType].colorActive : 
+                            edgeConfig[tokenType].color,
+                    label: edgelabel,
+                }]);
+
             });
                   
             node.tokens[tokenType] = tokens;
@@ -190,7 +216,13 @@ const tick = () => {
             load += node.process({ node, simTime, coreId });
         }
 
-        nodes.update([{ ...node, load }]);
+        node.load.push(load);
+
+        if (node.load.length > NODE_HISTORY_MAX_DP) {
+            node.load.shift();
+        }
+
+        nodes.update([{ ...node, load: node.load }]);
     });
 
 

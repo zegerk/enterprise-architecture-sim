@@ -22,7 +22,7 @@ const loadNetwork = ({ nodes, edges }) => {
      */
     nodes.forEach((node) => {
         node.cores = node.cores ?? 1;
-        node.load = 0;
+        node.load = [];
 
         /**
          * Layout stuff
@@ -39,6 +39,7 @@ const loadNetwork = ({ nodes, edges }) => {
      */
     edges.forEach((edge) => {
         edge.width = edge.bandwidth ? edge.bandwidth * 2 : 1;
+        edge.load = [];
 
         edge.arrows = {
             to: {
