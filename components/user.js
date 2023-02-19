@@ -8,7 +8,7 @@ const process = ({ nodes }) => ({ node, simTime, coreId }) => {
 
     if (coreId < 2) {
         /**
-         * Create a token every tick, the token is duplicated to a 
+         * Create some tokens every tick, the token is duplicated to a 
          * waiting user token so we can match its unique id later with
          * the response token
          */
@@ -29,6 +29,9 @@ const process = ({ nodes }) => ({ node, simTime, coreId }) => {
         simTime,
     });
 
+    /**
+     * Merge a response token id with a waiting token - aka: request is done
+     */
     mergeTokens({
         node,
         tokensFrom: [tokenTypes.TOKEN_TYPE_RES, tokenTypes.TOKEN_TYPE_WAIT],

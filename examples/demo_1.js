@@ -24,7 +24,13 @@ const loadNetwork = ({ nodes, edges }) => {
         /**
          * Layout stuff
          */
-        node.font = { multi: 'markdown' },
+        node.font = { 
+            multi: 'markdown',
+            size: 10,
+            color: 'black',
+            face: 'courier'
+        };
+
         node.margin = { top: 2, left: 2, bottom: 2, right: 2 };
 
         node.heightConstraint = { minimum: 100 };
@@ -35,6 +41,15 @@ const loadNetwork = ({ nodes, edges }) => {
      * Edges houskeeping
      */
     edges.forEach((edge) => {
+
+        edge.font = {
+            size: 15,
+            color: 'white',
+            face: 'courier',
+            strokeWidth: 3,
+            strokeColor: 'black',
+        };
+
         edge.width = edge.bandwidth ? edge.bandwidth * 2 : 1;
 
         edge.arrows = {
