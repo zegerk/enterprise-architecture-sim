@@ -6,6 +6,12 @@ import { loadNetwork, edgeConfig } from './examples/demo_1.js';
 import { addUserRequest } from './components/user.js';
 
 /**
+ * HTML housekeeping
+ */
+const elementActiveContainer = document.getElementById('elementActive');
+const elementIdContainer = document.getElementById('elementId');
+
+/**
  * Time in ms between two simulation ticks
  */
 const TICK_DELAY_MS = 250;
@@ -52,6 +58,8 @@ nodes.forEach((node) => {
 
 edges.forEach((edge) => { 
     edge.load = [];
+
+    edge.enabled !== false && (edge.enabled = true);
 });
   
 const container = document.getElementById('mynetwork');
@@ -287,21 +295,13 @@ const eventLoop = setInterval(tick, TICK_DELAY_MS);
  */
 
 network.on("click", function (params) {
-    params.event = "[original event]";
-    /*
-    console.log(JSON.stringify(
-        params,
-        null,
-        4
-    ));
 
-    console.log(
-        "click event, getNodeAt returns: " +
-        this.getNodeAt(params.pointer.DOM)
-    );
-    */
+    params.event = "[original event]";
 
     let activeNodeId = this.getNodeAt(params.pointer.DOM);
+    let activeEdgeId = this.getEdgeAt(params.pointer.DOM);
+    
+    console.log(`Clicked edge ${activeEdgeId} node ${activeNodeId}`);
 
     /**
      * A node has been clicked
@@ -310,12 +310,19 @@ network.on("click", function (params) {
         // var newColor = "#" + Math.floor(Math.random() * 255 * 255 * 255).toString(16);
         let activeNode = nodes.get(activeNodeId);
         
-        addUserRequest({ node: activeNode, simTime});
+        //addUserRequest({ node: activeNode, simTime});
 
-        nodes.update([{ id: activeNodeId, tokens: activeNode.tokens }]);
+        //nodes.update([{ id: activeNodeId, tokens: activeNode.tokens }]);
 
-
+        infoContainer.innerHTML = activeNode.id;
     };
+
+    if (activeEdgeId) {
+        let activeEdge = edges.get(activeEdgeId);
+        
+        elementActiveContainer.checked = activeEdge.enabled;
+        elementIdContainer.innerHTML = activeEdge.id;
+    }
 
 });
 
