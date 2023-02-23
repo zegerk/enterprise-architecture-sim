@@ -12,6 +12,12 @@ const elementActiveContainer = document.getElementById('elementActive');
 const elementIdContainer = document.getElementById('elementId');
 
 /**
+ * Store id of currently clicked element
+ */
+let activeEdgeId = false;
+let activeNodeId = false;
+
+/**
  * Time in ms between two simulation ticks
  */
 const TICK_DELAY_MS = 250;
@@ -103,8 +109,12 @@ const tick = () => {
                  * filter on all nodes for which the active node is the parent (from)
                  * 
                  * Only send tokens over the edge accepting the current token type
+                 * 
+                 * Only send tokens if the edge is enableds
                  */
-                if (connectedEdge.from != node.id || !connectedEdge.tokenTypes.includes(tokenType)) {
+                if (!connectedEdge.enabled ||
+                     connectedEdge.from != node.id || 
+                    !connectedEdge.tokenTypes.includes(tokenType)) {
                     return;
                 }
 
@@ -298,8 +308,8 @@ network.on("click", function (params) {
 
     params.event = "[original event]";
 
-    let activeNodeId = this.getNodeAt(params.pointer.DOM);
-    let activeEdgeId = this.getEdgeAt(params.pointer.DOM);
+    activeNodeId = this.getNodeAt(params.pointer.DOM);
+    activeEdgeId = this.getEdgeAt(params.pointer.DOM);
     
     console.log(`Clicked edge ${activeEdgeId} node ${activeNodeId}`);
 
@@ -315,16 +325,33 @@ network.on("click", function (params) {
         //nodes.update([{ id: activeNodeId, tokens: activeNode.tokens }]);
 
         infoContainer.innerHTML = activeNode.id;
-    };
+    } else {
+        activeNodeId = false;
+    }
 
     if (activeEdgeId) {
         let activeEdge = edges.get(activeEdgeId);
-        
+
         elementActiveContainer.checked = activeEdge.enabled;
         elementIdContainer.innerHTML = activeEdge.id;
+    } else {
+        activeEdgeId = false;
     }
 
 });
+
+const elementActiveClick = (event) => {
+
+    if (activeEdgeId) {
+        let activeEdge = edges.get(activeEdgeId);
+
+        activeEdge.enabled = elementActiveContainer.checked;
+
+        edges.update([{ ...activeEdge }]);
+    }
+}
+elementActiveContainer.onclick = elementActiveClick;
+
 
 /**
  * Charting stuff
