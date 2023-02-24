@@ -17,6 +17,9 @@ const elementIdContainer = document.getElementById('elementId');
 let activeEdgeId = false;
 let activeNodeId = false;
 
+const COLOR_EDGE_ACTIVE = 'red';
+const COLOR_EDGE_NON_ACTIVE = 'green';
+
 /**
  * Time in ms between two simulation ticks
  */
@@ -64,6 +67,7 @@ nodes.forEach((node) => {
 
 edges.forEach((edge) => { 
     edge.load = [];
+    edge.loadCurrent = 0;
 
     edge.enabled !== false && (edge.enabled = true);
 });
@@ -142,7 +146,7 @@ const tick = () => {
                  * 
                  * @todo : make this configurable
                  */
-                let bandwidth = connectedEdge.bandwidth ?? 1
+                const bandwidth = connectedEdge.bandwidth ?? 1
                 let tokensSent = 0;
 
                 for (let idx = 0; idx < bandwidth; idx++) {
@@ -167,37 +171,7 @@ const tick = () => {
                     }
                 }
 
-                /**
-                 * Add the load to the history
-                 */
-                connectedEdge.load.push(tokensSent);
-
-                /**
-                 * Rotate the array
-                 */
-                if (connectedEdge.load.length > NODE_HISTORY_MAX_DP) {
-                    connectedEdge.load.shift();
-                }
-
-                /**
-                 * Compute the average load of the edge
-                 * 
-                 * @todo create getEdgeLabel function..
-                 */
-                const averageLoad = connectedEdge.load.reduce(
-                    (accumulator, currentValue) => accumulator + currentValue,
-                    0
-                ) / connectedEdge.load.length;
-            
-                const edgelabel = Math.round(100 * (averageLoad / bandwidth)) + '%';
-
-                edges.update([{ 
-                    id: connectedEdge.id,
-                    color: tokensSent ? 
-                            edgeConfig[tokenType].colorActive : 
-                            edgeConfig[tokenType].color,
-                    label: edgelabel,
-                }]);
+                connectedEdge.loadCurrent = tokensSent;
 
             });
                   
@@ -205,6 +179,52 @@ const tick = () => {
 
             nodes.update([{ id: node.id, tokens: node.tokens }]);
         })
+    });
+
+    /**
+     * Update the edges
+     */    
+    edges.forEach((edge) => {
+
+        const bandwidth = edge.bandwidth ?? 1;
+        const tokensSent = edge.loadCurrent;
+
+        /**
+         * Add the load to the history
+         */
+        edge.load.push(tokensSent);
+
+        /**
+         * Rotate the array
+         */
+        if (edge.load.length > NODE_HISTORY_MAX_DP) {
+            edge.load.shift();
+        }
+
+        /**
+         * Compute the average load of the edge
+         * 
+         * @todo create getEdgeLabel function..
+         */
+        const averageLoad = edge.load.reduce(
+            (accumulator, currentValue) => accumulator + currentValue,
+            0
+        ) / edge.load.length;
+    
+        const edgelabel = Math.round(100 * (averageLoad / bandwidth)) + '%';
+
+        edges.update([{ 
+            id: edge.id,
+            dashes: edge.enabled ? false : [10, 10],
+            color: tokensSent ? 
+                    COLOR_EDGE_ACTIVE : 
+                    COLOR_EDGE_NON_ACTIVE,
+            label: edgelabel,
+            /**
+             * Reset the current load for the next round
+             */
+            loadCurrent: 0,
+        }]);
     });
 
     /**
