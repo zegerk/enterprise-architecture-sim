@@ -68,7 +68,7 @@ const loadNodes = ({ nodes }) => {
             route: routeDefault(), process: processUser({ nodes }), 
             tokens: getTokens(), _tempTokens: getTokens(), 
             shape: 'box', color: 'lightgreen',
-            cores: 4,
+            cores: 8,
         },
 
         { id: 2, name: "api gateway", 

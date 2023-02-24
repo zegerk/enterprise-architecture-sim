@@ -10,7 +10,7 @@ const getNodeLabel = ({ node, simTime }) => {
 
     const MAX_LABEL_ROWS = 5;
 
-    let label = `_${node.name}_\n`;
+    let label = `_${node.name}_\n[Cores: ${node.cores}]\n`;
     let rowIdx = 0;
 
     Object.entries(node.tokens).forEach((nodeTokenType) => {
