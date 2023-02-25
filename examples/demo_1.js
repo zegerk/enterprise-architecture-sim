@@ -1,8 +1,9 @@
 
-import { process as processDb } from '../components/database.js';
 import { process as processUser } from '../components/user.js';
-import { process as processApiGateway } from '../components/api_gateway.js';
-import { process as processApiService } from '../components/api_service.js';
+
+import { componentConfig as configDb } from '../components/database.js';
+import { componentConfig as configApiService } from '../components/api_service.js';
+import { componentConfig as configApiGateway } from '../components/api_gateway.js';
 
 import { tokenTypes } from '../core/tokens.js';
 import { getTokens } from '../core/tokens.js';
@@ -33,8 +34,8 @@ const loadNetwork = ({ nodes, edges }) => {
 
         node.margin = { top: 2, left: 2, bottom: 2, right: 2 };
 
-        node.heightConstraint = { minimum: 100 };
-        node.widthConstraint = { minimum: 100 };
+        node.heightConstraint = { minimum: 120 };
+        node.widthConstraint = { minimum: 120 };
     })
 
     /**
@@ -72,25 +73,32 @@ const loadNodes = ({ nodes }) => {
         },
 
         { id: 2, name: "api gateway", 
-            route: routeRandom(), process: processApiGateway({ nodes }), 
+            route: routeRandom(), 
+            processConfig: configApiGateway,
             tokens: getTokens(), _tempTokens: getTokens(), 
             shape: 'box',
             cores: 4,
         },
 
         { id: 3, name: "Micro-service 1", 
-            route: routeDefault(), process: processApiService({ nodes }),
+            route: routeDefault(), processConfig: configApiService,
             tokens: getTokens(), _tempTokens: getTokens(), shape: 'box' },
         { id: 4, name: "Micro-service 2", 
-            route: routeDefault(), process: processApiService({ nodes }),
+            route: routeDefault(), processConfig: configApiService,
             tokens: getTokens(), _tempTokens: getTokens(), shape: 'box' },
         { id: 5, name: "Micro-service 3", 
-            route: routeDefault(), process: processApiService({ nodes }),
+            route: routeDefault(), processConfig: configApiService,
             tokens: getTokens(), _tempTokens: getTokens(), shape: 'box' },
         
-        { id: 6, name: "Database s1", route: routeDefault(), process: processDb({ nodes }), tokens: getTokens(), _tempTokens: getTokens(), shape: 'database' },
-        { id: 7, name: "Database s2", route: routeDefault(), process: processDb({ nodes }), tokens: getTokens(), _tempTokens: getTokens(), shape: 'database' },
-        { id: 8, name: "Database s3", route: routeDefault(), process: processDb({ nodes }), tokens: getTokens(), _tempTokens: getTokens(), shape: 'database' },
+        { id: 6, name: "Database s1", 
+            route: routeDefault(), processConfig: configDb, 
+            tokens: getTokens(), _tempTokens: getTokens(), shape: 'database' },
+        { id: 7, name: "Database s2", 
+            route: routeDefault(), processConfig: configDb, 
+            tokens: getTokens(), _tempTokens: getTokens(), shape: 'database' },
+        { id: 8, name: "Database s3", 
+            route: routeDefault(), processConfig: configDb, 
+            tokens: getTokens(), _tempTokens: getTokens(), shape: 'database' },
     ]);
 }
 

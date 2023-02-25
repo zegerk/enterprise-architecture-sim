@@ -8,11 +8,24 @@ import { getToken } from "./tokens.js";
  */
 const getNodeLabel = ({ node, simTime }) => {
 
-    const MAX_LABEL_ROWS = 5;
+    const MAX_LABEL_ROWS = 8;
 
     let label = `_${node.name}_\n[Cores: ${node.cores}]\n`;
     let rowIdx = 0;
 
+    /**
+     * The node config itself for reference
+     */
+    if (node.processConfig) {
+        node.processConfig.forEach( ({ operator, config }) => {
+            label += `${operator.getNodeLabel(config)}\n`;
+            rowIdx++;
+        });
+    }
+
+    /**
+     * List the tokens per type
+     */
     Object.entries(node.tokens).forEach((nodeTokenType) => {
         let [tokenType] = nodeTokenType;
 
@@ -30,10 +43,11 @@ const getNodeLabel = ({ node, simTime }) => {
         }
     });
 
+    /**
+     * Vertical alignment is not yet possible, add empty lines
+     * to put the final line at the bottom
+     */
     for (let i = 0; i < (MAX_LABEL_ROWS - rowIdx); i++) {
-        /**
-         * Vertical alignment is not yet possible
-         */
         label += `\n`;
     }
 
@@ -125,6 +139,9 @@ const timeoutTokens = ({ node, tokenFrom, tokenTo, timeout, simTime }) => {
 
     return true;
 }
+timeoutTokens.getNodeLabel = (config) => {
+    return `${config.tokenFrom} -> ${config.tokenTo} in [${config.timeout}]`;
+}
 
 const convertTokens = ({ node, tokenFrom, tokenTo }) => {
     /**
@@ -139,6 +156,9 @@ const convertTokens = ({ node, tokenFrom, tokenTo }) => {
     node.tokens[tokenTo].push(token);
 
     return true;
+}
+convertTokens.getNodeLabel = (config) => {
+    return `${config.tokenFrom} -> ${config.tokenTo}`;
 }
 
 export { getNodeLabel, mergeTokens, convertTokens, timeoutTokens };

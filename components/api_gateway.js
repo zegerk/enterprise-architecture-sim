@@ -26,23 +26,4 @@ const componentConfig = [
     },       
 ]
 
-/**
- * The API converts "in" tokens to validated "api" request tokens
- * 
- * @todo timeouts should be "houskeeping" or OS level -
- */
-const process = ({ nodes }) => ({ node, simTime }) => {
-    
-    let processResult = false;
-
-    componentConfig.forEach( ({ operator, config }) => {
-        /**
-         * Add node and config to call function parameter
-         */
-        processResult = operator({ ...config, node, simTime }) || processResult;
-    });
-
-    return processResult;
-}
-
-export { process }
+export { componentConfig }

@@ -1,7 +1,7 @@
-import { tokenTypes, getTokens, getToken } from './core/tokens.js';
+import { tokenTypes } from './core/tokens.js';
 import { getNodeLabel } from './core/node.js';
 
-import { loadNetwork, edgeConfig } from './examples/demo_1.js';
+import { loadNetwork } from './examples/demo_1.js';
 
 import { addUserRequest } from './components/user.js';
 
@@ -182,7 +182,7 @@ const tick = () => {
     });
 
     /**
-     * Update the edges
+     * Update the edges, add label and set width / color
      */    
     edges.forEach((edge) => {
 
@@ -244,15 +244,11 @@ const tick = () => {
     });
 
     /**
-     * Process all tokens in all nodes
+     * Run the "cpu" on all nodes 
      * 
      * @todo - do this in a separate tick cycle to simulate "slow" processing?
      */
-    nodes.forEach((node) => {
-        if (!node.process) {
-            return;
-        } 
-        
+    nodes.forEach((node) => {        
         /**
          * Active processes
          */
@@ -263,7 +259,22 @@ const tick = () => {
          * should be a housekeeping / OS call 
          */
         for (let coreId = 0; coreId < node.cores; coreId++) {
-            load += node.process({ node, simTime, coreId });
+
+            /**
+             * @todo temp structure until config has been rewritten
+             */
+            if (node.processConfig) {
+                let processResult = false;
+
+                node.processConfig.forEach( ({ operator, config }) => {
+                    processResult = 
+                        operator({ ...config, nodes, node, simTime, coreId }) || processResult;
+                });
+            
+                load += processResult;    
+            } else {
+                load += node.process({ node, simTime, coreId });
+            }
         }
 
         node.load.push(load);
