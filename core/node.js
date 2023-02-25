@@ -96,7 +96,7 @@ const mergeTokens = ({ node, tokensFrom, tokenTo, simTime }) => {
 const timeoutTokens = ({ node, tokenFrom, tokenTo, timeout, simTime }) => {
 
     if (!node.tokens[tokenFrom].length) {
-        return
+        return false;
     }
     
     node.tokens[tokenFrom].forEach((token, index) => {
@@ -123,6 +123,22 @@ const timeoutTokens = ({ node, tokenFrom, tokenTo, timeout, simTime }) => {
     node.tokens[tokenFrom] =
         node.tokens[tokenFrom].filter((node) => node !== false);
 
+    return true;
 }
 
-export { getNodeLabel, mergeTokens, timeoutTokens };
+const convertTokens = ({ node, tokenFrom, tokenTo }) => {
+    /**
+     * Return false if nothing to do, used for "cpu" usage
+     */
+    if (!node.tokens[tokenFrom].length) {
+        return false;
+    }
+
+    const token = node.tokens[tokenFrom].shift();
+
+    node.tokens[tokenTo].push(token);
+
+    return true;
+}
+
+export { getNodeLabel, mergeTokens, convertTokens, timeoutTokens };
