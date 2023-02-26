@@ -3,7 +3,6 @@ import { getNodeLabel } from './core/node.js';
 
 import { loadNetwork } from './examples/demo_1.js';
 
-import { addUserRequest } from './components/user.js';
 
 /**
  * HTML housekeeping
@@ -256,25 +255,19 @@ const tick = () => {
 
         /**
          * @todo Timeouts on tokens are called for each core.. there
-         * should be a housekeeping / OS call 
+         * should be a housekeeping / OS call - even better, the load
+         * should be a float where housekeeping takes a bit less, the
+         * node itself can check if it should be run for each core
          */
         for (let coreId = 0; coreId < node.cores; coreId++) {
+            let processResult = false;
 
-            /**
-             * @todo temp structure until config has been rewritten
-             */
-            if (node.processConfig) {
-                let processResult = false;
-
-                node.processConfig.forEach( ({ operator, config }) => {
-                    processResult = 
-                        operator({ ...config, nodes, node, simTime, coreId }) || processResult;
-                });
-            
-                load += processResult;    
-            } else {
-                load += node.process({ node, simTime, coreId });
-            }
+            node.processConfig.forEach( ({ operator, config }) => {                    
+                processResult = 
+                    operator({ ...config, nodes, node, simTime, coreId }) || processResult;
+            });
+        
+            load += processResult;    
         }
 
         node.load.push(load);

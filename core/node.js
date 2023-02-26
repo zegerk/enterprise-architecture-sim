@@ -103,6 +103,10 @@ const mergeTokens = ({ node, tokensFrom, tokenTo, simTime }) => {
         node.tokens[tokenTypeB].filter((node) => node !== false);
 
 }
+mergeTokens.getNodeLabel = (config) => {
+    return `Merge ${config.tokensFrom} -> ${config.tokenTo}`;
+}
+
 
 /**
  * Timeout tokens
@@ -161,4 +165,42 @@ convertTokens.getNodeLabel = (config) => {
     return `${config.tokenFrom} -> ${config.tokenTo}`;
 }
 
-export { getNodeLabel, mergeTokens, convertTokens, timeoutTokens };
+/**
+ * Create a token and clone it (copy the id) 
+ * 
+ * The id can be used to match the token later one, example:
+ * create request token and a wait token, then wait for the request
+ * token to return and match the id
+ */
+const createAndCloneToken = ({ tokenCreate, tokenClone, node, simTime }) => {
+    const createToken = getToken({ simTime });
+    const cloneToken = getToken({ simTime });
+
+    cloneToken.id = createToken.id;
+
+    node.tokens[tokenCreate].push(createToken);
+    node.tokens[tokenClone].push(cloneToken);
+}
+createAndCloneToken.getNodeLabel = (config) => {
+    return `${config.tokenCreate} && ${config.tokenClone}`;
+}
+
+const randomProcess = (config) => {
+    if ( Math.min( 1,
+            Math.max( 0, config.probability )
+        ) > Math.random()
+    ) {
+        /**
+         * Call the encapsulated function and merge all arguments
+         * 
+         */
+        return config.processConfig.operator({ ...config.processConfig.config, ...config});
+    }
+
+    return false;
+}
+randomProcess.getNodeLabel = ({ processConfig, probability }) => {
+    return `P${probability} - ${processConfig.operator.getNodeLabel(processConfig.config)}`;
+}
+
+export { getNodeLabel, mergeTokens, randomProcess, createAndCloneToken, convertTokens, timeoutTokens };

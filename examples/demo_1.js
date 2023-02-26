@@ -1,6 +1,4 @@
-
-import { process as processUser } from '../components/user.js';
-
+import { componentConfig as configUser } from '../components/user.js';
 import { componentConfig as configDb } from '../components/database.js';
 import { componentConfig as configApiService } from '../components/api_service.js';
 import { componentConfig as configApiGateway } from '../components/api_gateway.js';
@@ -66,7 +64,7 @@ const loadNetwork = ({ nodes, edges }) => {
 const loadNodes = ({ nodes }) => {
     nodes.update([
         { id: 1, name: "users", 
-            route: routeDefault(), process: processUser({ nodes }), 
+            route: routeDefault(), processConfig: configUser, 
             tokens: getTokens(), _tempTokens: getTokens(), 
             shape: 'box', color: 'lightgreen',
             cores: 8,
