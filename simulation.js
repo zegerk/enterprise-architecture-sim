@@ -1,6 +1,6 @@
 import { tokenTypes } from './core/tokens.js';
 import { getNodeLabel } from './core/node.js';
-
+import { getEdgeLabel } from './core/edge.js';
 import { loadNetwork } from './examples/demo_1.js';
 
 
@@ -185,7 +185,6 @@ const tick = () => {
      */    
     edges.forEach((edge) => {
 
-        const bandwidth = edge.bandwidth ?? 1;
         const tokensSent = edge.loadCurrent;
 
         /**
@@ -199,26 +198,14 @@ const tick = () => {
         if (edge.load.length > NODE_HISTORY_MAX_DP) {
             edge.load.shift();
         }
-
-        /**
-         * Compute the average load of the edge
-         * 
-         * @todo create getEdgeLabel function..
-         */
-        const averageLoad = edge.load.reduce(
-            (accumulator, currentValue) => accumulator + currentValue,
-            0
-        ) / edge.load.length;
     
-        const edgelabel = Math.round(100 * (averageLoad / bandwidth)) + '%';
-
         edges.update([{ 
             id: edge.id,
             dashes: edge.enabled ? false : [10, 10],
             color: tokensSent ? 
                     COLOR_EDGE_ACTIVE : 
                     COLOR_EDGE_NON_ACTIVE,
-            label: edgelabel,
+            label: getEdgeLabel({ edge }),
             /**
              * Reset the current load for the next round
              */
