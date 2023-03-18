@@ -42,11 +42,15 @@ const loadNetwork = ({ nodes, edges }) => {
     edges.forEach((edge) => {
 
         edge.font = {
+            multi: 'markdown',
             size: 15,
             color: 'white',
             face: 'courier',
             strokeWidth: 3,
             strokeColor: 'black',
+            bold: {
+                size: 2,
+            }
         };
 
         edge.width = edge.bandwidth ? edge.bandwidth * 2 : 1;
@@ -63,7 +67,7 @@ const loadNetwork = ({ nodes, edges }) => {
 
 const loadNodes = ({ nodes }) => {
     nodes.update([
-        { id: 1, name: "users", 
+        { id: 1, name: "users",
             route: routeDefault(), processConfig: configUser, 
             tokens: getTokens(), _tempTokens: getTokens(), 
             shape: 'box', color: 'lightgreen',

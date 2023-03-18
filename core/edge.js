@@ -6,7 +6,7 @@ const getEdgeLabel = ({ edge }) => {
 
     
     edge.tokenTypes.forEach( (tokenType) => {
-        label += `${tokenType}\n`;
+        label += `__ ${tokenType} __\n`;
     });
 
     /**

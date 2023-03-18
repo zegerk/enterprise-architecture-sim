@@ -9,6 +9,25 @@ import { loadNetwork } from './examples/demo_1.js';
  */
 const elementActiveContainer = document.getElementById('elementActive');
 const elementIdContainer = document.getElementById('elementId');
+const infoContainer = document.getElementById('info');
+
+/**
+ * Chart test
+ */
+const graphContainer = document.getElementById('graph');
+const performanceChart = new vis.DataSet();
+
+const performanceChartOptions = {
+    start: 0,
+    end: 1000,
+
+    drawPoints: false,
+    shaded: {
+      orientation: "bottom", // top, bottom
+    },
+    height: 100,
+  };
+const performanceChartVis = new vis.Graph2d(graphContainer, performanceChart, performanceChartOptions);
 
 /**
  * Store id of currently clicked element
@@ -279,20 +298,23 @@ const tick = () => {
     /**
      * Test graphing on usernode
      */
+    performanceChart.add({
+        x: simTime,
+        y: nodes.get(1).tokens[tokenTypes.TOKEN_TYPE_WAIT].length,
+    });
 
-    performanceChart.data.labels.push(simTime);
-    performanceChart.data.datasets[0].data.push(
-        nodes.get(1).tokens[tokenTypes.TOKEN_TYPE_FAIL].length 
-    );
 
-    if (simTime > 100) {
-        performanceChart.data.labels.shift();
-        performanceChart.data.datasets[0].data.shift();
+    var range = performanceChartVis.getWindow();
+    var interval = range.end - range.start;
+    performanceChartVis.setWindow(simTime - interval, simTime, { animation: false });
 
-        performanceChart.scales.x.options.min = simTime - 100;
-    }
-
-    performanceChart.update();
+    var interval = range.end - range.start;
+    var oldIds = performanceChart.getIds({
+        filter: function (item) {
+        return item.x < range.start - interval;
+        },
+    });
+    performanceChart.remove(oldIds);
 
 
         /*
@@ -362,20 +384,3 @@ const elementActiveClick = (event) => {
     }
 }
 elementActiveContainer.onclick = elementActiveClick;
-
-
-/**
- * Charting stuff
- */
-var performanceChartRef = document.getElementById("performanceChart");
-var performanceChart = new Chart(performanceChartRef, {
-    type: 'line',
-    data: {
-        datasets: [{
-            data: []
-        }]
-    },
-    options: {
-        responsive: true,
-    },
-});

@@ -4,11 +4,11 @@
     <title>Network</title>
     <script
       type="text/javascript"
-      src="https://cdn.jsdelivr.net/npm/chart.js"
+      src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"
     ></script>
     <script
       type="text/javascript"
-      src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"
+      src="https://visjs.github.io/vis-timeline/standalone/umd/vis-timeline-graph2d.min.js"
     ></script>
     <style type="text/css">
       #mynetwork {
@@ -20,25 +20,34 @@
         border: 1px solid lightgray;
       }
 
-      #info {
-        background-color: gray;
+      #active-node {
+        background-color: lightgray;
 
         position: fixed; /* Set the navbar to fixed position */
         top: 0; /* Position the navbar at the top of the page */
         width: 100%; /* Full width */
-        height: 50px;
+        height: 150px;
       }
+
+      /* Hide the visjs graph y axis - does not seem to be possible through the api */
+      .vis-time-axis {
+        display: none;
+      }
+
     </style>
   </head>
   <body>
-    <div id="info">
-      <span id="elementId"></span>
-      <input type="checkbox" id="elementActive" name="elementActive">
+    <div id="active-node">
+      <div id="info">
+        Node ID: <span id="elementId"></span>
+        Active: <input type="checkbox" id="elementActive" name="elementActive">
+      </div>
+      <div id="graph"></div>  
     </div>
-
+  
     <div id="mynetwork"></div>
 
-    <canvas id="performanceChart"></canvas>
+    
 
     <script type="module" src="simulation.js">
     </script>
