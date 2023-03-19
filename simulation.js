@@ -3,23 +3,40 @@ import { getNodeLabel } from './core/node.js';
 import { getEdgeLabel } from './core/edge.js';
 import { loadNetwork } from './examples/demo_1.js';
 
+/**
+ * Maximum number of datapoints store store per node
+ */
+const NODE_HISTORY_MAX_DP = 500;
 
 /**
  * HTML housekeeping
  */
 const elementActiveContainer = document.getElementById('elementActive');
 const elementIdContainer = document.getElementById('elementId');
-const infoContainer = document.getElementById('info');
 
 /**
- * Chart test
+ * Graphing
  */
-const graphContainer = document.getElementById('graph');
-const performanceChart = new vis.DataSet();
+const graphContainer = [
+    document.getElementById('graph-0'),
+    document.getElementById('graph-1'),
+    document.getElementById('graph-2'),
+    document.getElementById('graph-3'),
+];
 
-const performanceChartOptions = {
+const graphLabelContainer = [
+    document.getElementById('graph-label-0'),
+    document.getElementById('graph-label-1'),
+    document.getElementById('graph-label-2'),
+    document.getElementById('graph-label-3'),
+];
+
+const graphLoadContainer = document.getElementById('graph-load');
+
+
+const chartOptions = {
     start: 0,
-    end: 1000,
+    end: NODE_HISTORY_MAX_DP,
 
     drawPoints: false,
     shaded: {
@@ -27,7 +44,17 @@ const performanceChartOptions = {
     },
     height: 100,
   };
-const performanceChartVis = new vis.Graph2d(graphContainer, performanceChart, performanceChartOptions);
+
+/**
+ * Dataset for graph is taken from the active node
+ */
+const chartVis = [
+    new vis.Graph2d(graphContainer[0], null, chartOptions),
+    new vis.Graph2d(graphContainer[1], null, chartOptions),
+    new vis.Graph2d(graphContainer[2], null, chartOptions),
+    new vis.Graph2d(graphContainer[3], null, chartOptions),
+]
+const chartLoadVis = new vis.Graph2d(graphLoadContainer, null, chartOptions);
 
 /**
  * Store id of currently clicked element
@@ -42,11 +69,6 @@ const COLOR_EDGE_NON_ACTIVE = 'green';
  * Time in ms between two simulation ticks
  */
 const TICK_DELAY_MS = 250;
-
-/**
- * Maximum number of datapoints store store per node
- */
-const NODE_HISTORY_MAX_DP = 100;
 
 /**
  * Simulation timer in ticks
@@ -80,7 +102,8 @@ loadNetwork({ nodes, edges });
  */
 nodes.forEach((node) => { 
     node.cores = node.cores ?? 1;
-    node.load = [];
+    node.load = new vis.DataSet();
+    node.cpuLoad = new vis.DataSet();
 });
 
 edges.forEach((edge) => { 
@@ -249,7 +272,10 @@ const tick = () => {
     });
 
     /**
-     * Run the "cpu" on all nodes 
+     * Node statistics
+     *  
+     * - Run the "cpu" on all nodes 
+     * - Add the token count to the history
      * 
      * @todo - do this in a separate tick cycle to simulate "slow" processing?
      */
@@ -276,13 +302,72 @@ const tick = () => {
             load += processResult;    
         }
 
-        node.load.push(load);
+        node.load.add({
+            x: simTime,
+            y: load
+        });
+        
+        /**
+         * @todo this is duplicate code
+         */
+        const oldLoadIds = node.load.getIds({
+            filter: function (item) {
+                return item.x < simTime - NODE_HISTORY_MAX_DP;
+            },
+        });
+        node.load.remove(oldLoadIds);
+        
+        /**
+         * Compute a cpuLoad 
+         * 
+         * This takes all the values in the load array into account,
+         * cpu load takes some time to respond to the actual load
+         */
+        var loadSum = 0
+        node.load.forEach((currentValue) => loadSum += currentValue.y);
+        const averageLoad = loadSum / node.load.length;
+    
+        const cpuLoad = Math.round((averageLoad / node.cores) * 100);
+        node.cpuLoadCurrent = cpuLoad;
 
-        if (node.load.length > NODE_HISTORY_MAX_DP) {
-            node.load.shift();
-        }
+        node.cpuLoad.add({
+            x: simTime,
+            y: cpuLoad,
+        })
 
-        nodes.update([{ ...node, load: node.load }]);
+        /**
+         * @todo this is duplicate code
+         */
+        const oldCpuLoadIds = node.cpuLoad.getIds({
+            filter: function (item) {
+                return item.x < simTime - NODE_HISTORY_MAX_DP;
+            },
+        });
+        node.cpuLoad.remove(oldCpuLoadIds);        
+
+        /**
+         * Load computation done - move to history
+         */
+        Object.keys(node.tokens).forEach((tokenType) => {
+            node.history[tokenType].add({
+                x: simTime,
+                y: node.tokens[tokenType].length,
+            });
+
+            /**
+             * Remove oldest id
+             * 
+             * @todo feels like it is better to cleanup every few ticks or so
+             */
+            const oldIds = node.history[tokenType].getIds({
+                filter: function (item) {
+                    return item.x < simTime - NODE_HISTORY_MAX_DP;
+                },
+            });
+            node.history[tokenType].remove(oldIds);
+        });
+
+        nodes.update([{ ...node, load: node.load, history: node.history }]);
     });
 
 
@@ -296,39 +381,44 @@ const tick = () => {
     })
 
     /**
-     * Test graphing on usernode
+     * Show the graphs of the active node
      */
-    performanceChart.add({
-        x: simTime,
-        y: nodes.get(1).tokens[tokenTypes.TOKEN_TYPE_WAIT].length,
-    });
+    if (activeNodeId) {
 
+        var chartIdx = 0;
+        Object.keys(nodes.get(activeNodeId).history).every((tokenType) => {
 
-    var range = performanceChartVis.getWindow();
-    var interval = range.end - range.start;
-    performanceChartVis.setWindow(simTime - interval, simTime, { animation: false });
+            if (nodes.get(activeNodeId).history[tokenType].length) {
 
-    var interval = range.end - range.start;
-    var oldIds = performanceChart.getIds({
-        filter: function (item) {
-        return item.x < range.start - interval;
-        },
-    });
-    performanceChart.remove(oldIds);
+                chartVis[chartIdx].setItems(
+                    nodes.get(activeNodeId).history[tokenType]
+                );
+                graphLabelContainer[chartIdx].innerHTML = tokenType;
 
+                /**
+                 * Fake break
+                 */
+                return chartIdx++ < chartVis.length - 1;
+            }
+        })
 
-        /*
-        network.getConnectedEdges(node.id).forEach((edgeId => {
-           
-            console.log(`Checking edge ${edgeId}`);
+        /**
+         * Generic graph for all nodes
+         */
+        chartLoadVis.setItems(
+            nodes.get(activeNodeId).cpuLoad
+        );
 
-            const edge = network.selectEdges(edgeId);
-
-            console.log(edge);
-
-        }))
-        */
-    
+        /**
+         * Move the graph when required
+         */
+        var range = chartVis[0].getWindow();
+        var interval = range.end - range.start;
+        chartVis.every((chart) => 
+            chart.setWindow(simTime - interval, simTime, { animation: false })
+        );
+        chartLoadVis.setWindow(simTime - interval, simTime, { animation: false });
+    }
 }
 
 const eventLoop = setInterval(tick, TICK_DELAY_MS);
@@ -357,7 +447,7 @@ network.on("click", function (params) {
 
         //nodes.update([{ id: activeNodeId, tokens: activeNode.tokens }]);
 
-        infoContainer.innerHTML = activeNode.id;
+        elementIdContainer.innerHTML = activeNode.id;
     } else {
         activeNodeId = false;
     }

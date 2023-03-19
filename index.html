@@ -34,6 +34,15 @@
         display: none;
       }
 
+      .graph {
+        width: 100%;
+      }
+
+      .graph-container {
+        width: 20%;
+        float: left;
+      }
+
     </style>
   </head>
   <body>
@@ -42,7 +51,32 @@
         Node ID: <span id="elementId"></span>
         Active: <input type="checkbox" id="elementActive" name="elementActive">
       </div>
-      <div id="graph"></div>  
+
+      <div class="graph-container">
+        <label id="graph-label-0">Graph 1</label>
+        <div class="graph" id="graph-0"></div>
+      </div>
+        
+      <div class="graph-container">
+        <label id="graph-label-1">Graph 2</label>
+        <div class="graph" id="graph-1"></div>
+      </div>
+
+      <div class="graph-container">
+        <label id="graph-label-2">Graph 3</label>
+        <div class="graph" id="graph-2"></div>
+      </div>
+
+      <div class="graph-container">
+        <label id="graph-label-3">Graph 4</label>
+        <div class="graph" id="graph-3"></div>
+      </div>
+      
+      <div class="graph-container">
+        <label id="graph-load-label">Load</label>
+        <div class="graph" id="graph-load"></div>
+      </div>
+
     </div>
   
     <div id="mynetwork"></div>

@@ -13,6 +13,8 @@ const tokenTypes = {
 
 /**
  * Tokens factory for the nodes
+ * 
+ * @todo this is "suboptimal"
  */
 const getTokens = () => {
     return {
@@ -27,7 +29,25 @@ const getTokens = () => {
 }
 
 /**
+ * Store the history of the tokens so we can use it for graphs
+ * or other analyses
+ */
+const getTokensHistory = () => {
+    return {
+        [tokenTypes.TOKEN_TYPE_REQ]: new vis.DataSet(),
+        [tokenTypes.TOKEN_TYPE_API]: new vis.DataSet(),
+        [tokenTypes.TOKEN_TYPE_DB]: new vis.DataSet(),
+        [tokenTypes.TOKEN_TYPE_RES]: new vis.DataSet(),
+        [tokenTypes.TOKEN_TYPE_FAIL]: new vis.DataSet(),
+        [tokenTypes.TOKEN_TYPE_WAIT]: new vis.DataSet(),
+        [tokenTypes.TOKEN_TYPE_DONE]: new vis.DataSet(),
+    };
+}
+
+/**
  * Token factory
+ * 
+ * Creates a token with a unique id
  */
 const getToken = ({ simTime }) => {
 
@@ -56,4 +76,4 @@ const getToken = ({ simTime }) => {
     };
 }
 
-export { tokenTypes, getTokens, getToken };
+export { tokenTypes, getTokens, getToken, getTokensHistory };
