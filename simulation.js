@@ -1,4 +1,4 @@
-import { tokenTypes } from './core/tokens.js';
+import { getToken, getTokens, getTokensHistory, tokenTypes } from './core/tokens.js';
 import { getNodeLabel } from './core/node.js';
 import { getEdgeLabel } from './core/edge.js';
 import { loadNetwork } from './examples/demo_1.js';
@@ -6,7 +6,7 @@ import { loadNetwork } from './examples/demo_1.js';
 /**
  * Maximum number of datapoints store store per node
  */
-const NODE_HISTORY_MAX_DP = 500;
+const NODE_HISTORY_MAX_DP = 100;
 
 /**
  * HTML housekeeping
@@ -277,7 +277,8 @@ const tick = () => {
      * - Run the "cpu" on all nodes 
      * - Add the token count to the history
      * 
-     * @todo - do this in a separate tick cycle to simulate "slow" processing?
+     * @todo - do this in a separate tick cycle to be able to handle conversions taking
+     * over 1 tick
      */
     nodes.forEach((node) => {        
         /**
@@ -346,7 +347,7 @@ const tick = () => {
         node.cpuLoad.remove(oldCpuLoadIds);        
 
         /**
-         * Load computation done - move to history
+         * Load computation done - move to history of the tokentypes
          */
         Object.keys(node.tokens).forEach((tokenType) => {
             node.history[tokenType].add({
@@ -370,6 +371,80 @@ const tick = () => {
         nodes.update([{ ...node, load: node.load, history: node.history }]);
     });
 
+    /**
+     * Scaling?
+     */
+    nodes.forEach((node) => {      
+        
+        /**
+         * Scale
+         */
+        if (node.cpuLoadCurrent > 30 && node.scale) {
+            /**
+             * Shoud be constuctor
+             */
+            let newNodeId = nodes.add({
+                name: node.name + ' clone',
+                route: node.route,
+                processConfig: node.processConfig,
+                tokens: getTokens(),
+                _tempTokens: getTokens(),
+                history: getTokensHistory(),
+                shape: node.shape,
+                color: node.color,
+                cores: node.cores,
+                
+                load: new vis.DataSet(),
+                cpuLoad: new vis.DataSet(),
+
+                font: node.font,
+                margin: node.margin,
+            })[0];
+
+            /**
+             * Clone the edges
+             */
+            network.getConnectedEdges(node.id).forEach((connectedEdgeId) => { 
+                const connectedEdge = edges.get(connectedEdgeId);
+
+                console.log(connectedEdge)
+
+                /**
+                 * Should be constructor
+                 */
+                edges.add({ 
+                    from: connectedEdge.from == node.id ? newNodeId : connectedEdge.from, 
+                    to: connectedEdge.to == node.id ? newNodeId : connectedEdge.to, 
+                    tokenTypes: connectedEdge.tokenTypes,
+                    bandwidth: connectedEdge.bandwidth,
+
+                    load: [],
+                    loadCurrent: 0,
+                
+                    enabled: connectedEdge.enabled,
+
+                    font: connectedEdge.font, 
+                    width: connectedEdge.width,
+                    arrows: connectedEdge.arrows,
+                })
+            });
+
+            /**
+             * Hack for now - scale once, should set timestamp?
+             */
+            node.scale = false
+
+            node.color = { border: 'red' }  
+
+        } else {
+
+            node.color = { border: 'black' }  
+
+        }
+
+        nodes.update([{ ...node }]);
+    });
+
 
     /**
      * Update all the labels
@@ -384,7 +459,9 @@ const tick = () => {
      * Show the graphs of the active node
      */
     if (activeNodeId) {
-
+        var range = chartVis[0].getWindow();
+        var interval = range.end - range.start;
+                
         var chartIdx = 0;
         Object.keys(nodes.get(activeNodeId).history).every((tokenType) => {
 
@@ -393,10 +470,12 @@ const tick = () => {
                 chartVis[chartIdx].setItems(
                     nodes.get(activeNodeId).history[tokenType]
                 );
+                chartVis[chartIdx].setWindow(simTime - interval, simTime, { animation: false })
+
                 graphLabelContainer[chartIdx].innerHTML = tokenType;
 
                 /**
-                 * Fake break
+                 * Stop showing tokens if there are no more charts left
                  */
                 return chartIdx++ < chartVis.length - 1;
             }
@@ -408,15 +487,6 @@ const tick = () => {
         chartLoadVis.setItems(
             nodes.get(activeNodeId).cpuLoad
         );
-
-        /**
-         * Move the graph when required
-         */
-        var range = chartVis[0].getWindow();
-        var interval = range.end - range.start;
-        chartVis.every((chart) => 
-            chart.setWindow(simTime - interval, simTime, { animation: false })
-        );
         chartLoadVis.setWindow(simTime - interval, simTime, { animation: false });
     }
 }
@@ -424,9 +494,8 @@ const tick = () => {
 const eventLoop = setInterval(tick, TICK_DELAY_MS);
 
 /**
- * EVents
+ * Events
  */
-
 network.on("click", function (params) {
 
     params.event = "[original event]";
@@ -465,6 +534,9 @@ network.on("click", function (params) {
 
 const elementActiveClick = (event) => {
 
+    /**
+     * Disable or enable the edge
+     */
     if (activeEdgeId) {
         let activeEdge = edges.get(activeEdgeId);
 
